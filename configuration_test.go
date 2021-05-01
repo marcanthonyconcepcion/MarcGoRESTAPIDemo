@@ -5,12 +5,17 @@ import (
 )
 
 func TestReadYamlFile(t *testing.T) {
-	configuration, fault := readConfiguration("resources/MarcGoRESTAPIDemo.yaml")
-	if fault != nil {
-		t.Errorf("Error reading configuration file %s.", fault)
-	}
+	configuration := readConfiguration("resources/MarcGoRESTAPIDemo.yaml")
+	defer func() {
+		if fault := recover(); fault != nil {
+			t.Errorf("Error reading configuration file %s.", fault)
+		}
+	}()
 	if "localhost" != configuration.Database.Host {
 		t.Errorf("Value %s is NOT the expected database host from the config file.", configuration.Database.Host)
+	}
+	if 3306 != configuration.Database.Port {
+		t.Errorf("Value %d is NOT the expected database port from the config file.", configuration.Database.Port)
 	}
 	if "subscribers_database" != configuration.Database.DBName {
 		t.Errorf("Value %s is NOT the expected database name from the config file.", configuration.Database.DBName)

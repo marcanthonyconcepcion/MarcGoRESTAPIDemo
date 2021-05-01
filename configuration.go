@@ -1,7 +1,6 @@
 package MarcGoRESTAPIDemo
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
@@ -9,6 +8,7 @@ import (
 type Configuration struct {
 	Database struct {
 		Host     string
+		Port     uint16
 		DBName   string
 		User     string
 		Password string
@@ -21,15 +21,15 @@ type Configuration struct {
 	}
 }
 
-func readConfiguration(fileName string) (*Configuration, error) {
+func readConfiguration(fileName string) *Configuration {
 	buffer, fault := ioutil.ReadFile(fileName)
 	if fault != nil {
-		return nil, fault
+		panic(fault.Error())
 	}
 	configuration := &Configuration{}
 	fault = yaml.Unmarshal(buffer, configuration)
 	if fault != nil {
-		return nil, fmt.Errorf("error reading file %q: %v", fileName, fault)
+		panic(fault.Error())
 	}
-	return configuration, nil
+	return configuration
 }

@@ -1,5 +1,6 @@
 database:
   host: localhost
+  port: 3306
   dbname: subscribers_database
   user: user
   password: password
