@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021.
+ * Marc Concepcion
+ * marcanthonyconcepcion@gmail.com
+ */
+
 package MarcGoRESTAPIDemo
 
 import (
