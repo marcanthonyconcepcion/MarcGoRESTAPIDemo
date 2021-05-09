@@ -56,7 +56,7 @@ func (controller SubscriberController) create(response http.ResponseWriter, requ
 }
 
 func (controller SubscriberController) retrieve(response http.ResponseWriter, request *http.Request) {
-	index, indexError := strconv.Atoi(request.URL.Query().Get("index"))
+	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
 		controller.sendErrorMessage(response, indexError.Error())
 	}
@@ -78,7 +78,7 @@ func (controller SubscriberController) retrieve(response http.ResponseWriter, re
 
 func (controller SubscriberController) update(response http.ResponseWriter, request *http.Request) {
 	subscriber := Subscriber{}
-	index, indexError := strconv.Atoi(request.URL.Query().Get("index"))
+	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
 		controller.sendErrorMessage(response, indexError.Error())
 	}
@@ -97,7 +97,7 @@ func (controller SubscriberController) update(response http.ResponseWriter, requ
 }
 
 func (controller SubscriberController) delete(response http.ResponseWriter, request *http.Request) {
-	index, indexError := strconv.Atoi(request.URL.Query().Get("index"))
+	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
 		controller.sendErrorMessage(response, indexError.Error())
 	}
@@ -109,7 +109,7 @@ func (controller SubscriberController) delete(response http.ResponseWriter, requ
 }
 
 func (controller SubscriberController) activate(response http.ResponseWriter, request *http.Request) {
-	index, indexError := strconv.Atoi(request.URL.Query().Get("index"))
+	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
 		controller.sendErrorMessage(response, indexError.Error())
 	}
@@ -148,10 +148,11 @@ func MakeSubscriberController(model Records) SubscriberController {
 
 func (controller SubscriberController) ViewHandleRequests() {
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/subscribers", controller.list)
+	router.HandleFunc("/subscribers", controller.list).Methods("GET")
 	router.HandleFunc("/subscribers", controller.create).Methods("POST")
+	router.HandleFunc("/subscribers/{index}", controller.update).Methods("PUT")
 	router.HandleFunc("/subscribers/{index}", controller.activate).Methods("PATCH")
 	router.HandleFunc("/subscribers/{index}", controller.delete).Methods("DELETE")
-	router.HandleFunc("/subscribers/{index}", controller.retrieve)
+	router.HandleFunc("/subscribers/{index}", controller.retrieve).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
