@@ -20,11 +20,11 @@ type Records struct {
 }
 
 type Subscriber struct {
-	index          uint8
-	emailAddress   string
-	firstName      string
-	lastName       string
-	activationFlag bool
+	Index          uint8
+	EmailAddress   string
+	FirstName      string
+	LastName       string
+	ActivationFlag bool
 }
 
 func makeDatabaseRecords() Records {
@@ -39,40 +39,43 @@ func makeDatabaseRecords() Records {
 func (records Records) create(subscriber Subscriber) (sql.Result, error) {
 	result, fault := records.database.Exec(
 		"insert into `subscribers` (`email_address`, `last_name`, `first_name`) values (?, ?, ?)",
-		subscriber.emailAddress, subscriber.lastName, subscriber.firstName)
+		subscriber.EmailAddress, subscriber.LastName, subscriber.FirstName)
 	return result, fault
 }
 
 func (records Records) retrieve(index uint8) (*Subscriber, error) {
 	var subscriber Subscriber
 	record := records.database.QueryRow("select * from `subscribers` where `index`=?", index)
-	if recordModelError := record.Scan(&subscriber.index, &subscriber.emailAddress, &subscriber.lastName, &subscriber.firstName,
-		&subscriber.activationFlag); recordModelError != nil {
+	if recordModelError := record.Scan(&subscriber.Index, &subscriber.EmailAddress, &subscriber.LastName, &subscriber.FirstName,
+		&subscriber.ActivationFlag); recordModelError != nil {
 		return &subscriber, recordModelError
 	}
 	return &subscriber, nil
 }
 
-func (records Records) update(index uint8, updateValues map[string]string) (sql.Result, error) {
+func (records Records) update(subscriber Subscriber) (sql.Result, error) {
 	var parametersToUpdate []string
-	emailAddress, emailAddressKey := updateValues["email_address"]
-	if true == emailAddressKey {
-		parametersToUpdate = append(parametersToUpdate, "`email_address` = "+"\""+emailAddress+"\"")
+	if "" != subscriber.EmailAddress {
+		parametersToUpdate = append(parametersToUpdate, "`email_address` = "+"\""+subscriber.EmailAddress+"\"")
 	}
-	lastName, lastNameKey := updateValues["last_name"]
-	if true == lastNameKey {
-		parametersToUpdate = append(parametersToUpdate, "`last_name` = "+"\""+lastName+"\"")
+	if "" != subscriber.LastName {
+		parametersToUpdate = append(parametersToUpdate, "`last_name` = "+"\""+subscriber.LastName+"\"")
 	}
-	firstName, firstNameKey := updateValues["first_name"]
-	if true == firstNameKey {
-		parametersToUpdate = append(parametersToUpdate, "`first_name` = "+"\""+firstName+"\"")
-	}
-	activationFlag, activationFlagKey := updateValues["activation_flag"]
-	if true == activationFlagKey {
-		parametersToUpdate = append(parametersToUpdate, "`activation_flag` = "+activationFlag)
+	if "" != subscriber.FirstName {
+		parametersToUpdate = append(parametersToUpdate, "`first_name` = "+"\""+subscriber.FirstName+"\"")
 	}
 	result, updateFail := records.database.Exec("update `subscribers` set "+
-		strings.Join(parametersToUpdate, ",")+" where `index`=?", index)
+		strings.Join(parametersToUpdate, ",")+" where `index`=?", subscriber.Index)
+	return result, updateFail
+}
+
+func (records Records) activate(index uint8, activate bool) (sql.Result, error) {
+	activationFlag := 0
+	if activate == true {
+		activationFlag = 1
+	}
+	result, updateFail := records.database.Exec(
+		"update `subscribers` set activation_flag=? where `index`=?", activationFlag, index)
 	return result, updateFail
 }
 
@@ -89,8 +92,8 @@ func (records Records) list() ([]Subscriber, error) {
 	subscribers := make([]Subscriber, 0)
 	for rows.Next() {
 		var subscriber Subscriber
-		if recordModelError := rows.Scan(&subscriber.index, &subscriber.emailAddress, &subscriber.lastName, &subscriber.firstName,
-			&subscriber.activationFlag); recordModelError != nil {
+		if recordModelError := rows.Scan(&subscriber.Index, &subscriber.EmailAddress, &subscriber.LastName, &subscriber.FirstName,
+			&subscriber.ActivationFlag); recordModelError != nil {
 			return subscribers, recordModelError
 		}
 		subscribers = append(subscribers, subscriber)
