@@ -142,16 +142,16 @@ func (controller SubscriberController) sendErrorMessage(response http.ResponseWr
 	}
 }
 
-func makeSubscriberController(model Records) SubscriberController {
+func MakeSubscriberController(model Records) SubscriberController {
 	return SubscriberController{model}
 }
 
-func (controller SubscriberController) viewHandleRequests() {
-	myRouter := mux.NewRouter().StrictSlash(true)
-	myRouter.HandleFunc("/subscribers", controller.list)
-	myRouter.HandleFunc("/subscribers", controller.create).Methods("POST")
-	myRouter.HandleFunc("/subscribers/{id}", controller.activate).Methods("PATCH")
-	myRouter.HandleFunc("/subscribers/{id}", controller.delete).Methods("DELETE")
-	myRouter.HandleFunc("/subscribers/{id}", controller.retrieve)
-	log.Fatal(http.ListenAndServe(":10000", myRouter))
+func (controller SubscriberController) ViewHandleRequests() {
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/subscribers", controller.list)
+	router.HandleFunc("/subscribers", controller.create).Methods("POST")
+	router.HandleFunc("/subscribers/{id}", controller.activate).Methods("PATCH")
+	router.HandleFunc("/subscribers/{id}", controller.delete).Methods("DELETE")
+	router.HandleFunc("/subscribers/{id}", controller.retrieve)
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
