@@ -52,7 +52,7 @@ func setupSubscriberControllerTestFixture() SubscriberControllerTestFixture {
 		},
 	}
 	model := makeDatabaseRecords()
-	dut := SubscriberController{model}
+	dut := makeSubscriberController(model)
 	for _, subscriber := range expectedRecords {
 		_, createError := model.create(subscriber)
 		if createError != nil {

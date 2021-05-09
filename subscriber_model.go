@@ -20,11 +20,11 @@ type Records struct {
 }
 
 type Subscriber struct {
-	Index          uint8
-	EmailAddress   string
-	FirstName      string
-	LastName       string
-	ActivationFlag bool
+	Index          uint8  `json:"index,omitempty"`
+	EmailAddress   string `json:"email_address,omitempty"`
+	FirstName      string `json:"first_name,omitempty"`
+	LastName       string `json:"last_name,omitempty"`
+	ActivationFlag bool   `json:"activation_flag,omitempty"`
 }
 
 func makeDatabaseRecords() Records {

@@ -8,6 +8,7 @@ package MarcGoRESTAPIDemo
 
 import (
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"io"
 	"log"
 	"net/http"
@@ -139,4 +140,18 @@ func (controller SubscriberController) sendErrorMessage(response http.ResponseWr
 	if ioError != nil {
 		log.Panic(ioError)
 	}
+}
+
+func makeSubscriberController(model Records) SubscriberController {
+	return SubscriberController{model}
+}
+
+func (controller SubscriberController) viewHandleRequests() {
+	myRouter := mux.NewRouter().StrictSlash(true)
+	myRouter.HandleFunc("/subscribers", controller.list)
+	myRouter.HandleFunc("/subscribers", controller.create).Methods("POST")
+	myRouter.HandleFunc("/subscribers/{id}", controller.activate).Methods("PATCH")
+	myRouter.HandleFunc("/subscribers/{id}", controller.delete).Methods("DELETE")
+	myRouter.HandleFunc("/subscribers/{id}", controller.retrieve)
+	log.Fatal(http.ListenAndServe(":10000", myRouter))
 }
