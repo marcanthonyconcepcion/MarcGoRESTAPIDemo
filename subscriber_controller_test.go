@@ -8,6 +8,7 @@ package MarcGoRESTAPIDemo
 
 import (
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"log"
 	"math/rand"
 	"net/http"
@@ -137,10 +138,11 @@ func TestRetrieveController(t *testing.T) {
 	if fault != nil {
 		t.Fatal(fault)
 	}
-	query := request.URL.Query()
-	index := rand.Intn(len(fixture.expectedRecords)-1) + 1
-	query.Add("index", strconv.Itoa(index))
-	request.URL.RawQuery = query.Encode()
+	index := rand.Intn(len(fixture.expectedRecords)) + 1
+	vars := map[string]string{
+		"index": strconv.Itoa(index),
+	}
+	request = mux.SetURLVars(request, vars)
 	response := httptest.NewRecorder()
 	handler := http.HandlerFunc(fixture.dut.retrieve)
 	handler.ServeHTTP(response, request)
@@ -165,9 +167,11 @@ func TestUpdateController(t *testing.T) {
 	form.Index = uint8(rand.Intn(len(fixture.expectedRecords)) + 1)
 	form.FirstName = "Handsome Marc"
 	form.LastName = "Immaculate Conception"
-
+	vars := map[string]string{
+		"index": strconv.Itoa(int(form.Index)),
+	}
+	request = mux.SetURLVars(request, vars)
 	query := request.URL.Query()
-	query.Add("index", strconv.Itoa(int(form.Index)))
 	query.Add("first_name", form.FirstName)
 	query.Add("last_name", form.LastName)
 	request.URL.RawQuery = query.Encode()
@@ -195,21 +199,21 @@ func TestUpdateController(t *testing.T) {
 
 func TestDeleteController(t *testing.T) {
 	fixture := setupSubscriberControllerTestFixture()
-	index := rand.Intn(len(fixture.expectedRecords)) + 1
 	request, fault := http.NewRequest("DELETE", "/subscribers", nil)
 	if fault != nil {
 		t.Fatal(fault)
 	}
-	query := request.URL.Query()
-	query.Add("index", strconv.Itoa(index))
-	request.URL.RawQuery = query.Encode()
+	index := rand.Intn(len(fixture.expectedRecords)) + 1
+	vars := map[string]string{
+		"index": strconv.Itoa(index),
+	}
+	request = mux.SetURLVars(request, vars)
 	response := httptest.NewRecorder()
 	handler := http.HandlerFunc(fixture.dut.delete)
 	handler.ServeHTTP(response, request)
 	if status := response.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
-
 	listHandler := http.HandlerFunc(fixture.dut.list)
 	listHandler.ServeHTTP(response, request)
 	if status := response.Code; status != http.StatusOK {
@@ -229,13 +233,16 @@ func TestDeleteController(t *testing.T) {
 
 func TestActivateController(t *testing.T) {
 	fixture := setupSubscriberControllerTestFixture()
-	index := rand.Intn(len(fixture.expectedRecords)) + 1
 	request, fault := http.NewRequest("PATCH", "/subscribers", nil)
 	if fault != nil {
 		t.Fatal(fault)
 	}
+	index := rand.Intn(len(fixture.expectedRecords)-1) + 1
+	vars := map[string]string{
+		"index": strconv.Itoa(index),
+	}
+	request = mux.SetURLVars(request, vars)
 	query := request.URL.Query()
-	query.Add("index", strconv.Itoa(index))
 	query.Add("activation_flag", "true")
 	request.URL.RawQuery = query.Encode()
 	response := httptest.NewRecorder()
