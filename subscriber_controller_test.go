@@ -51,8 +51,8 @@ func setupSubscriberControllerTestFixture() SubscriberControllerTestFixture {
 			ActivationFlag: false,
 		},
 	}
-	model := makeDatabaseRecords()
-	dut := makeSubscriberController(model)
+	model := MakeDatabaseRecords()
+	dut := MakeSubscriberController(model)
 	for _, subscriber := range expectedRecords {
 		_, createError := model.create(subscriber)
 		if createError != nil {

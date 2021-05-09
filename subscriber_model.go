@@ -27,7 +27,7 @@ type Subscriber struct {
 	ActivationFlag bool   `json:"activation_flag,omitempty"`
 }
 
-func makeDatabaseRecords() Records {
+func MakeDatabaseRecords() Records {
 	database, dbInstanceFail := sql.Open("mysql", settings.Database.User+":"+settings.Database.Password+
 		"@tcp("+settings.Database.Host+":"+strconv.Itoa(int(settings.Database.Port))+")/"+settings.Database.DBName)
 	if dbInstanceFail != nil {

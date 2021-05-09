@@ -45,7 +45,7 @@ func setupSubscriberModelTestFixture() SubscriberModelTestFixture {
 			ActivationFlag: false,
 		},
 	}
-	dut := makeDatabaseRecords()
+	dut := MakeDatabaseRecords()
 	noDBConnection := dut.database.Ping()
 	if noDBConnection != nil {
 		panic(noDBConnection.Error())
