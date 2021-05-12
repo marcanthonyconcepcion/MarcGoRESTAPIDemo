@@ -6,5 +6,3 @@ database:
   password: password
 mvc:
   resource: subscribers
-log:
-  filename: error.log

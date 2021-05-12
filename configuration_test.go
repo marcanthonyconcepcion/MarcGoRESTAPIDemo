@@ -35,7 +35,4 @@ func TestReadYamlFile(t *testing.T) {
 	if "subscribers" != configuration.MVC.Resource {
 		t.Errorf("Value %s is NOT the expected mvc resource from the config file.", configuration.MVC.Resource)
 	}
-	if "error.log" != configuration.Log.Filename {
-		t.Errorf("Value %s is NOT the expected log file name from the config file.", configuration.Log.Filename)
-	}
 }
