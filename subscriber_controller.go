@@ -7,7 +7,9 @@
 package MarcGoRESTAPIDemo
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/gorilla/mux"
 	"io"
 	"log"
@@ -19,14 +21,20 @@ type SubscriberController struct {
 	model Records
 }
 
-type ErrorMessage struct {
-	Error string
+type Message struct {
+	Status  string `json:"status"`
+	Details string `json:"details"`
+}
+
+type Update struct {
+	Message string     `json:"message"`
+	Updates Subscriber `json:"updates"`
 }
 
 func (controller SubscriberController) list(response http.ResponseWriter, request *http.Request) {
 	subscribers, recordsError := controller.model.list()
 	if recordsError != nil {
-		controller.sendErrorMessage(response, recordsError.Error())
+		controller.sendErrorMessage(http.StatusInternalServerError, response, recordsError.Error())
 		return
 	}
 	jsonSubscribers, jsonError := json.Marshal(subscribers)
@@ -41,6 +49,11 @@ func (controller SubscriberController) list(response http.ResponseWriter, reques
 }
 
 func (controller SubscriberController) create(response http.ResponseWriter, request *http.Request) {
+	if 0 == len(request.URL.Query()) {
+		controller.sendErrorMessage(http.StatusMethodNotAllowed, response,
+			"HTTP command POST without providing parameters is not allowed. Please provide an acceptable HTTP command.")
+		return
+	}
 	emailAddress := request.URL.Query().Get("email_address")
 	firstName := request.URL.Query().Get("first_name")
 	lastName := request.URL.Query().Get("last_name")
@@ -50,19 +63,34 @@ func (controller SubscriberController) create(response http.ResponseWriter, requ
 	subscriber.EmailAddress = emailAddress
 	_, recordsError := controller.model.create(subscriber)
 	if recordsError != nil {
-		controller.sendErrorMessage(response, recordsError.Error())
+		controller.sendErrorMessage(http.StatusInternalServerError, response, recordsError.Error())
 		return
+	}
+
+	jsonSubscriber, jsonError := json.Marshal(Update{"Record created", subscriber})
+	if jsonError != nil {
+		log.Panic(jsonError)
+		return
+	}
+	_, ioError := io.WriteString(response, string(jsonSubscriber))
+	if ioError != nil {
+		log.Panic(ioError)
 	}
 }
 
 func (controller SubscriberController) retrieve(response http.ResponseWriter, request *http.Request) {
 	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
-		controller.sendErrorMessage(response, indexError.Error())
+		controller.sendErrorMessage(http.StatusBadRequest, response, indexError.Error())
+		return
 	}
 	subscriber, recordsError := controller.model.retrieve(uint8(index))
 	if recordsError != nil {
-		controller.sendErrorMessage(response, recordsError.Error())
+		if errors.Is(recordsError, sql.ErrNoRows) {
+			controller.sendErrorMessage(http.StatusNotFound, response, "Subscriber does not exist.")
+		} else {
+			controller.sendErrorMessage(http.StatusInternalServerError, response, recordsError.Error())
+		}
 		return
 	}
 	jsonSubscriber, jsonError := json.Marshal(subscriber)
@@ -80,9 +108,15 @@ func (controller SubscriberController) update(response http.ResponseWriter, requ
 	subscriber := Subscriber{}
 	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
-		controller.sendErrorMessage(response, indexError.Error())
+		controller.sendErrorMessage(http.StatusBadRequest, response, indexError.Error())
+		return
 	}
 	subscriber.Index = uint8(index)
+	if 0 == len(request.URL.Query()) {
+		controller.sendErrorMessage(http.StatusMethodNotAllowed, response,
+			"HTTP command PUT without providing parameters is not allowed. Please provide an acceptable HTTP command.")
+		return
+	}
 	emailAddress := request.URL.Query().Get("email_address")
 	subscriber.EmailAddress = emailAddress
 	firstName := request.URL.Query().Get("first_name")
@@ -91,55 +125,82 @@ func (controller SubscriberController) update(response http.ResponseWriter, requ
 	subscriber.LastName = lastName
 	_, recordsError := controller.model.update(subscriber)
 	if recordsError != nil {
-		controller.sendErrorMessage(response, recordsError.Error())
+		controller.sendErrorMessage(http.StatusInternalServerError, response, recordsError.Error())
 		return
+	}
+
+	jsonSubscriber, jsonError := json.Marshal(Update{"Record updated", subscriber})
+	if jsonError != nil {
+		log.Panic(jsonError)
+		return
+	}
+	_, ioError := io.WriteString(response, string(jsonSubscriber))
+	if ioError != nil {
+		log.Panic(ioError)
 	}
 }
 
 func (controller SubscriberController) delete(response http.ResponseWriter, request *http.Request) {
 	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
-		controller.sendErrorMessage(response, indexError.Error())
+		controller.sendErrorMessage(http.StatusBadRequest, response, indexError.Error())
+		return
 	}
 	_, recordsError := controller.model.delete(uint8(index))
 	if recordsError != nil {
-		controller.sendErrorMessage(response, recordsError.Error())
+		controller.sendErrorMessage(http.StatusInternalServerError, response, recordsError.Error())
 		return
+	}
+
+	jsonSubscriber, jsonError := json.Marshal(Message{"success", "Deleted record of subscriber #" + strconv.Itoa(index)})
+	if jsonError != nil {
+		log.Panic(jsonError)
+		return
+	}
+	_, ioError := io.WriteString(response, string(jsonSubscriber))
+	if ioError != nil {
+		log.Panic(ioError)
 	}
 }
 
 func (controller SubscriberController) activate(response http.ResponseWriter, request *http.Request) {
 	index, indexError := strconv.Atoi(mux.Vars(request)["index"])
 	if indexError != nil {
-		controller.sendErrorMessage(response, indexError.Error())
+		controller.sendErrorMessage(http.StatusBadRequest, response, indexError.Error())
+		return
 	}
 	activateString := request.URL.Query().Get("activation_flag")
 	activate := false
 	if activateString == "true" {
 		activate = true
-	} else if activateString == "false" {
-		activate = false
 	} else {
-		controller.sendErrorMessage(response, "Invalid activation flag. "+
-			"Please provide either 'true' to activate the subscriber or 'false' to deactivate the subscriber.")
+		controller.sendErrorMessage(http.StatusBadRequest, response,
+			"Only activating a subscriber is allowed. Please set the activation_flag to 'true'.")
 		return
 	}
 	_, recordsError := controller.model.activate(uint8(index), activate)
 	if recordsError != nil {
-		controller.sendErrorMessage(response, recordsError.Error())
+		controller.sendErrorMessage(http.StatusInternalServerError, response, recordsError.Error())
 		return
 	}
-}
 
-func (controller SubscriberController) sendErrorMessage(response http.ResponseWriter, error string) {
-	jsonErrorMessage, jsonError := json.Marshal(ErrorMessage{error})
+	jsonSubscriber, jsonError := json.Marshal(Message{"success", "Record #" + strconv.Itoa(index) + " activated."})
 	if jsonError != nil {
 		log.Panic(jsonError)
+		return
 	}
-	_, ioError := io.WriteString(response, string(jsonErrorMessage))
+	_, ioError := io.WriteString(response, string(jsonSubscriber))
 	if ioError != nil {
 		log.Panic(ioError)
 	}
+}
+
+func (controller SubscriberController) sendErrorMessage(httpStatusCode int, response http.ResponseWriter, errorMessage string) {
+	jsonErrorMessage, jsonError := json.Marshal(Message{"error", errorMessage})
+	if jsonError != nil {
+		log.Panic(jsonError)
+	}
+	http.Error(response, string(jsonErrorMessage), httpStatusCode)
 }
 
 func MakeSubscriberController(model Records) SubscriberController {

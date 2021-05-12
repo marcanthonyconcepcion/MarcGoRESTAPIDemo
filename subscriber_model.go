@@ -46,11 +46,9 @@ func (records Records) create(subscriber Subscriber) (sql.Result, error) {
 func (records Records) retrieve(index uint8) (*Subscriber, error) {
 	var subscriber Subscriber
 	record := records.database.QueryRow("select * from `subscribers` where `index`=?", index)
-	if recordModelError := record.Scan(&subscriber.Index, &subscriber.EmailAddress, &subscriber.LastName, &subscriber.FirstName,
-		&subscriber.ActivationFlag); recordModelError != nil {
-		return &subscriber, recordModelError
-	}
-	return &subscriber, nil
+	recordModelError := record.Scan(&subscriber.Index, &subscriber.EmailAddress, &subscriber.LastName, &subscriber.FirstName,
+		&subscriber.ActivationFlag)
+	return &subscriber, recordModelError
 }
 
 func (records Records) update(subscriber Subscriber) (sql.Result, error) {

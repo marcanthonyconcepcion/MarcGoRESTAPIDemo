@@ -97,6 +97,31 @@ func TestListController(t *testing.T) {
 
 func TestCreateController(t *testing.T) {
 	fixture := setupSubscriberControllerTestFixture()
+	subscriberForm := Subscriber{
+		EmailAddress: "riseofskywalker@starwars.com",
+		FirstName:    "Rey",
+		LastName:     "Palpatine",
+	}
+	request, fault := http.NewRequest("POST", "/subscribers", nil)
+	if fault != nil {
+		t.Fatal(fault)
+	}
+	query := request.URL.Query()
+	query.Add("email_address", subscriberForm.EmailAddress)
+	query.Add("first_name", subscriberForm.FirstName)
+	query.Add("last_name", subscriberForm.LastName)
+	request.URL.RawQuery = query.Encode()
+	createResponse := httptest.NewRecorder()
+	createHandler := http.HandlerFunc(fixture.dut.create)
+	createHandler.ServeHTTP(createResponse, request)
+	if status := createResponse.Code; status != http.StatusOK {
+		t.Errorf("createHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+	recordCreatedMessage := ConvertToJson(Update{"Record created", subscriberForm})
+	if createResponse.Body.String() != recordCreatedMessage {
+		t.Errorf("createHandler returned unexpected body: got %v want %v", createResponse.Body.String(), recordCreatedMessage)
+	}
+
 	newSubscriber := Subscriber{
 		Index:          4,
 		EmailAddress:   "riseofskywalker@starwars.com",
@@ -104,30 +129,16 @@ func TestCreateController(t *testing.T) {
 		LastName:       "Palpatine",
 		ActivationFlag: false,
 	}
-	request, fault := http.NewRequest("POST", "/subscribers", nil)
-	if fault != nil {
-		t.Fatal(fault)
-	}
-	query := request.URL.Query()
-	query.Add("email_address", newSubscriber.EmailAddress)
-	query.Add("first_name", newSubscriber.FirstName)
-	query.Add("last_name", newSubscriber.LastName)
-	request.URL.RawQuery = query.Encode()
-	response := httptest.NewRecorder()
-	createHandler := http.HandlerFunc(fixture.dut.create)
-	createHandler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
-		t.Errorf("createHandler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
 	updatedExpectedRecords := append(fixture.expectedRecords, newSubscriber)
 	expectedMessage := ConvertToJson(updatedExpectedRecords)
+	listResponse := httptest.NewRecorder()
 	listHandler := http.HandlerFunc(fixture.dut.list)
-	listHandler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
+	listHandler.ServeHTTP(listResponse, request)
+	if status := listResponse.Code; status != http.StatusOK {
 		t.Errorf("createHandler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
-	if response.Body.String() != expectedMessage {
-		t.Errorf("createHandler returned unexpected body: got %v want %v", response.Body.String(), expectedMessage)
+	if listResponse.Body.String() != expectedMessage {
+		t.Errorf("createHandler returned unexpected body: got %v want %v", listResponse.Body.String(), expectedMessage)
 	}
 	fixture.tearDown()
 }
@@ -175,24 +186,31 @@ func TestUpdateController(t *testing.T) {
 	query.Add("first_name", form.FirstName)
 	query.Add("last_name", form.LastName)
 	request.URL.RawQuery = query.Encode()
-	response := httptest.NewRecorder()
+
+	updateResponse := httptest.NewRecorder()
 	handler := http.HandlerFunc(fixture.dut.update)
-	handler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
+	handler.ServeHTTP(updateResponse, request)
+	if status := updateResponse.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
+	recordUpdatedMessage := ConvertToJson(Update{"Record updated", form})
+	if updateResponse.Body.String() != recordUpdatedMessage {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			updateResponse.Body.String(), recordUpdatedMessage)
+	}
 
+	listResponse := httptest.NewRecorder()
 	listHandler := http.HandlerFunc(fixture.dut.list)
-	listHandler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
+	listHandler.ServeHTTP(listResponse, request)
+	if status := listResponse.Code; status != http.StatusOK {
 		t.Errorf("createHandler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 	fixture.expectedRecords[form.Index-1].FirstName = form.FirstName
 	fixture.expectedRecords[form.Index-1].LastName = form.LastName
 	expectedMessage := ConvertToJson(fixture.expectedRecords)
-	if response.Body.String() != expectedMessage {
+	if listResponse.Body.String() != expectedMessage {
 		t.Errorf("handler returned unexpected body: got %v want %v",
-			response.Body.String(), expectedMessage)
+			listResponse.Body.String(), expectedMessage)
 	}
 	fixture.tearDown()
 }
@@ -208,15 +226,22 @@ func TestDeleteController(t *testing.T) {
 		"index": strconv.Itoa(index),
 	}
 	request = mux.SetURLVars(request, vars)
-	response := httptest.NewRecorder()
+	deleteResponse := httptest.NewRecorder()
 	handler := http.HandlerFunc(fixture.dut.delete)
-	handler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
+	handler.ServeHTTP(deleteResponse, request)
+	if status := deleteResponse.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
+	recordDeletedMessage := ConvertToJson(Message{"success", "Deleted record of subscriber #" + strconv.Itoa(index)})
+	if deleteResponse.Body.String() != recordDeletedMessage {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			deleteResponse.Body.String(), recordDeletedMessage)
+	}
+
+	listResponse := httptest.NewRecorder()
 	listHandler := http.HandlerFunc(fixture.dut.list)
-	listHandler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
+	listHandler.ServeHTTP(listResponse, request)
+	if status := listResponse.Code; status != http.StatusOK {
 		t.Errorf("createHandler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 	updatedExpectedRecords := fixture.expectedRecords[1:]
@@ -224,9 +249,8 @@ func TestDeleteController(t *testing.T) {
 		updatedExpectedRecords = append(fixture.expectedRecords[:index-1], fixture.expectedRecords[index-1+1:]...)
 	}
 	expectedMessage := ConvertToJson(updatedExpectedRecords)
-	if response.Body.String() != expectedMessage {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			response.Body.String(), expectedMessage)
+	if listResponse.Body.String() != expectedMessage {
+		t.Errorf("handler returned unexpected body: got %v want %v", listResponse.Body.String(), expectedMessage)
 	}
 	fixture.tearDown()
 }
@@ -245,23 +269,27 @@ func TestActivateController(t *testing.T) {
 	query := request.URL.Query()
 	query.Add("activation_flag", "true")
 	request.URL.RawQuery = query.Encode()
-	response := httptest.NewRecorder()
+	activateResponse := httptest.NewRecorder()
 	handler := http.HandlerFunc(fixture.dut.activate)
-	handler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
+	handler.ServeHTTP(activateResponse, request)
+	if status := activateResponse.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+	expectedResponse := ConvertToJson(Message{"success", "Record #" + strconv.Itoa(index) + " activated."})
+	if activateResponse.Body.String() != expectedResponse {
+		t.Errorf("handler returned unexpected body: got %v want %v", activateResponse.Body.String(), expectedResponse)
 	}
 
 	listHandler := http.HandlerFunc(fixture.dut.list)
-	listHandler.ServeHTTP(response, request)
-	if status := response.Code; status != http.StatusOK {
+	listResponse := httptest.NewRecorder()
+	listHandler.ServeHTTP(listResponse, request)
+	if status := listResponse.Code; status != http.StatusOK {
 		t.Errorf("createHandler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 	fixture.expectedRecords[index-1].ActivationFlag = true
 	expectedMessage := ConvertToJson(fixture.expectedRecords)
-	if response.Body.String() != expectedMessage {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			response.Body.String(), expectedMessage)
+	if listResponse.Body.String() != expectedMessage {
+		t.Errorf("handler returned unexpected body: got %v want %v", listResponse.Body.String(), expectedMessage)
 	}
 	fixture.tearDown()
 }
